@@ -1,0 +1,96 @@
+name: Tat
+options:
+  bundleIdPrefix: io.github.qaqdfafd
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  Tat:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleName: tat
+        CFBundleDisplayName: tat
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHumanReadableCopyright: "tat — Tips And Todo"
+    settings:
+      base:
+        PRODUCT_NAME: tat
+        PRODUCT_MODULE_NAME: Tat
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.qaqdfafd.tat
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: NO
+        COMBINE_HIDPI_IMAGES: YES
+
+  TatTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Tat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.qaqdfafd.tat.tests
+        GENERATE_INFOPLIST_FILE: YES
+        # The app's PRODUCT_NAME is lowercase `tat`, so XcodeGen's default (target name) is wrong.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/tat.app/Contents/MacOS/tat
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  TatUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Tat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.qaqdfafd.tat.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        # XCUIApplication/XCUIElement are main-actor APIs; Swift 5 mode keeps the tests free of isolation noise.
+        SWIFT_VERSION: "5.0"
+
+schemes:
+  Tat:
+    build:
+      targets:
+        Tat: all
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - TatTests
+        - TatUITests
+    run:
+      config: Debug
+    archive:
+      config: Release
+  TatUnit:
+    build:
+      targets:
+        Tat: all
+    test:
+      config: Debug
+      targets:
+        - TatTests
