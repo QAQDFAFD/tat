@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/QAQDFAFD/tat/actions/workflows/ci.yml/badge.svg)](https://github.com/QAQDFAFD/tat/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/QAQDFAFD/tat)](https://github.com/QAQDFAFD/tat/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 屏幕右边缘的一张便签：**今天要做的事 + 今天值得瞄一眼的事。**
 
@@ -87,3 +88,7 @@ git push origin v0.2.0
 ```
 
 本地打包：`scripts/build-release.sh 0.2.0`，产物在 `dist/`。
+
+## License
+
+[MIT](LICENSE)
