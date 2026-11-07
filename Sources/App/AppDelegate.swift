@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UserNotifications
 
 /// Launch arguments understood by the app (used by the UI tests):
 /// - `-uiTesting`: throwaway preferences, stubbed tips, no login-item changes.
@@ -35,9 +36,11 @@ struct LaunchOptions {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var todos: TodoStore?
+    private var reminders: ReminderStore?
     private var panel: PanelController?
     private var statusItem: StatusItemController?
     private var hotKey: GlobalHotKey?
+    private let notificationRouter = NotificationRouter()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hosted unit tests load the app as a test host; don't put UI on screen for them.
@@ -60,6 +63,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             : TipsStore(settings: settings)
         let ui = PanelUIState()
         let loginItem = LoginItem(isAvailable: !options.uiTesting)
+        let reminders = ReminderStore(
+            fileURL: options.dataDirectory.appendingPathComponent("reminders.json"),
+            scheduler: options.uiTesting ? RecordingReminderScheduler(status: .authorized) : SystemReminderScheduler(),
+            settings: settings
+        )
 
         var actions = PanelActions()
         actions.quit = { NSApp.terminate(nil) }
@@ -74,13 +82,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(tips)
             .environment(settings)
             .environment(ui)
+            .environment(reminders)
             .environment(\.panelActions, actions)
 
         let panel = PanelController(rootView: root, settings: settings, tips: tips, ui: ui)
         panel.startMonitoring()
+        panel.onVisibilityChange = { visible in
+            // Pick up a permission change made in System Settings while we were hidden.
+            if visible { Task { await reminders.refreshAuthorization() } }
+        }
 
         self.todos = todos
+        self.reminders = reminders
         self.panel = panel
+        Task { await reminders.refreshAuthorization() }
+        if !options.uiTesting {
+            notificationRouter.onOpen = { [weak panel] in
+                panel?.show(on: PanelController.screenUnderMouse(), viaHover: false, focusInput: false)
+            }
+            UNUserNotificationCenter.current().delegate = notificationRouter
+        }
         statusItem = StatusItemController(todos: todos, settings: settings, loginItem: loginItem) { [weak panel] in
             panel?.toggle()
         }
@@ -97,5 +118,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func dayChanged() {
         Task { @MainActor in todos?.rollOverIfNeeded() }
+    }
+}
+
+/// Shows match reminders as banners even while tat is running, and opens the panel
+/// when one is clicked.
+@MainActor
+final class NotificationRouter: NSObject, UNUserNotificationCenterDelegate {
+    var onOpen: (() -> Void)?
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound, .list]
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        await MainActor.run { onOpen?() }
     }
 }

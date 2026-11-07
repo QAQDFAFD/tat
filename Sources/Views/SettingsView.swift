@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(ReminderStore.self) private var reminders
     @Environment(\.panelActions) private var actions
     @State private var launchAtLogin = false
 
@@ -64,6 +65,21 @@ struct SettingsView: View {
                             ))
                             .accessibilityIdentifier("settings.league.\(league.path)")
                         }
+                    }
+                    row("比赛提醒") {
+                        Picker("比赛提醒", selection: $settings.reminderLead) {
+                            ForEach(ReminderLead.allCases) { Text($0.title).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("settings.reminderLead")
+                    }
+                    .padding(.top, 4)
+                    Text("点比赛右侧的铃铛，开赛前会收到系统通知")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    if reminders.authorization == .denied {
+                        NotificationsOffNote()
+                            .padding(.horizontal, -10)
                     }
                 }
                 .toggleStyle(.checkbox)

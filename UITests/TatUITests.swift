@@ -26,8 +26,8 @@ final class TatUITests: XCTestCase {
         XCTAssertTrue(input.waitForExistence(timeout: 5))
 
         input.click()
-        input.typeText("买牛奶\n")
-        input.typeText("回复邮件\n")
+        addTodo("买牛奶")
+        addTodo("回复邮件")
 
         XCTAssertTrue(waitForCount(of: rows("todo.row"), toBe: 2))
         XCTAssertEqual(input.value as? String ?? "", "", "input clears after submit")
@@ -78,7 +78,7 @@ final class TatUITests: XCTestCase {
         launch(showPanel: true, pinned: true)
         XCTAssertTrue(todoInput.waitForExistence(timeout: 5))
         todoInput.click()
-        todoInput.typeText("持久化测试\n")
+        addTodo("持久化测试")
         XCTAssertTrue(waitForCount(of: rows("todo.row"), toBe: 1))
         app.terminate()
 
@@ -101,8 +101,8 @@ final class TatUITests: XCTestCase {
         XCTAssertTrue(element(.any, labelContains: "完场 切尔西 2 比 1 曼联").exists)
 
         todoInput.click()
-        todoInput.typeText("回复邮件\n")
-        todoInput.typeText("看英超\n")
+        addTodo("回复邮件")
+        addTodo("看英超")
         XCTAssertTrue(waitForCount(of: rows("todo.row"), toBe: 2), "rows: \(titles())")
         settle()
         element(.button, label: "完成：回复邮件").click()
@@ -128,6 +128,38 @@ final class TatUITests: XCTestCase {
         XCTAssertTrue(waitForCount(of: rows("market.row"), toBe: 6))
         XCTAssertFalse(element(.any, labelContains: "道琼斯").exists)
         XCTAssertEqual(rows("match.row").count, 0, "no league selected hides the matches section")
+    }
+
+    func testMatchReminderBell() {
+        launch(showPanel: true, pinned: true)
+        XCTAssertTrue(waitForCount(of: rows("match.row"), toBe: 3))
+        // Only the match that hasn't kicked off (阿斯顿维拉 vs 富勒姆) gets a bell.
+        XCTAssertEqual(app.buttons.matching(identifier: "match.reminder").count, 1)
+
+        element(.button, label: "提醒我：阿斯顿维拉 对 富勒姆").click()
+        let setBell = element(.button, label: "取消提醒：阿斯顿维拉 对 富勒姆")
+        XCTAssertTrue(setBell.waitForExistence(timeout: 2))
+        attachScreenshot(named: "reminder")
+
+        // Survives a restart.
+        app.terminate()
+        launch(showPanel: true, pinned: true)
+        XCTAssertTrue(setBell.waitForExistence(timeout: 5))
+
+        // Lead time lives in settings.
+        app.buttons["header.settings"].click()
+        let lead = app.popUpButtons["settings.reminderLead"]
+        XCTAssertTrue(lead.waitForExistence(timeout: 2))
+        XCTAssertEqual(lead.value as? String, "提前 15 分钟")
+        lead.click()
+        app.menuItems["提前 30 分钟"].click()
+        XCTAssertEqual(lead.value as? String, "提前 30 分钟")
+        app.buttons["header.settings"].click()
+
+        // Ring again to cancel.
+        XCTAssertTrue(setBell.waitForExistence(timeout: 2))
+        setBell.click()
+        XCTAssertTrue(element(.button, label: "提醒我：阿斯顿维拉 对 富勒姆").waitForExistence(timeout: 2))
     }
 
     // MARK: - Panel behaviour
@@ -213,6 +245,31 @@ final class TatUITests: XCTestCase {
         app.launchArguments = ["-uiTesting"] + (showPanel ? ["-showPanel"] : []) + (pinned ? ["-pinned"] : [])
         app.launchEnvironment["TAT_DATA_DIR"] = dataDirectory.path
         app.launch()
+    }
+
+    /// Types a todo and submits it. The very first keystrokes of a run can be dropped while
+    /// XCUITest switches the keyboard layout, so make sure the text reached the field before
+    /// pressing Return; whether Return creates the todo is still checked by the caller.
+    private func addTodo(_ text: String) {
+        let input = todoInput
+        input.click()
+        for _ in 0..<2 {
+            input.typeText(text)
+            if wait(for: input, value: text) { break }
+            input.typeKey("a", modifierFlags: .command)
+            input.typeKey(.delete, modifierFlags: [])
+        }
+        XCTAssertEqual(input.value as? String, text, "text never reached the input")
+        input.typeText("\n")
+        XCTAssertTrue(wait(for: input, value: ""), "input clears after submit")
+    }
+
+    private func wait(for element: XCUIElement, value: String, timeout: TimeInterval = 2) -> Bool {
+        let predicate = value.isEmpty
+            ? NSPredicate(format: "value == nil OR value == ''")
+            : NSPredicate(format: "value == %@", value)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }
 
     private func rows(_ identifier: String) -> XCUIElementQuery {

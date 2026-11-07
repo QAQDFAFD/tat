@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct MarketSection: View {
@@ -90,6 +91,7 @@ private struct QuoteRow: View {
 struct MatchSection: View {
     @Environment(TipsStore.self) private var tips
     @Environment(AppSettings.self) private var settings
+    @Environment(ReminderStore.self) private var reminders
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -102,6 +104,11 @@ struct MatchSection: View {
             .frame(height: 26)
 
             content
+
+            if reminders.authorization == .denied && !reminders.reminders.isEmpty {
+                NotificationsOffNote()
+                    .padding(.top, 2)
+            }
         }
     }
 
@@ -150,24 +157,29 @@ private struct MatchRow: View {
     let showLeague: Bool
 
     var body: some View {
-        HStack(spacing: 6) {
-            status
-                .frame(width: 44, alignment: .leading)
-            Text(match.home)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            score
-                .frame(width: 44)
-            Text(match.away)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 4) {
+            HStack(spacing: 6) {
+                status
+                    .frame(width: 44, alignment: .leading)
+                Text(match.home)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                score
+                    .frame(width: 44)
+                Text(match.away)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .font(.system(size: 13))
+            .lineLimit(1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityText)
+            .accessibilityIdentifier("match.row")
+            .help(showLeague ? League.named(match.league) : "")
+
+            ReminderBell(match: match)
         }
-        .font(.system(size: 13))
-        .lineLimit(1)
-        .padding(.horizontal, 10)
+        .padding(.leading, 10)
+        .padding(.trailing, 4)
         .frame(minHeight: 28)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityIdentifier("match.row")
-        .help(showLeague ? League.named(match.league) : "")
     }
 
     @ViewBuilder private var status: some View {
@@ -221,6 +233,64 @@ private struct MatchRow: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
+}
+
+/// Bell at the end of a match row. Only matches that haven't kicked off get one;
+/// other rows keep an empty slot so the columns stay aligned.
+private struct ReminderBell: View {
+    let match: Match
+
+    @Environment(ReminderStore.self) private var reminders
+    @Environment(AppSettings.self) private var settings
+    @State private var hovering = false
+
+    var body: some View {
+        let isOn = reminders.isSet(match)
+        if isOn || reminders.canRemind(match) {
+            Button {
+                Task { await reminders.toggle(match) }
+            } label: {
+                Image(systemName: isOn ? "bell.fill" : "bell")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(isOn ? Theme.accent : Color.secondary.opacity(hovering ? 1 : 0.55))
+                    .symbolEffect(.bounce, value: isOn)
+                    .frame(width: 22, height: 22)
+                    .background(RoundedRectangle(cornerRadius: Theme.rowCorner).fill(Color.primary.opacity(hovering ? 0.08 : 0)))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.15), value: hovering)
+            .help(isOn ? "取消提醒" : "开赛提醒（\(settings.reminderLead.title)）")
+            .accessibilityLabel(isOn ? "取消提醒：\(match.home) 对 \(match.away)" : "提醒我：\(match.home) 对 \(match.away)")
+            .accessibilityIdentifier("match.reminder")
+        } else {
+            Color.clear.frame(width: 22, height: 22)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Shown when reminders are set but macOS won't let tat post notifications.
+struct NotificationsOffNote: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "bell.slash")
+            Text("系统通知已关闭，提醒不会弹出")
+            Button("去开启") {
+                let id = Bundle.main.bundleIdentifier ?? ""
+                if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .buttonStyle(.link)
+            .accessibilityIdentifier("reminders.openNotificationSettings")
+        }
+        .font(.system(size: 12))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10)
+        .accessibilityIdentifier("reminders.notificationsOff")
+    }
 }
 
 private struct RefreshButton: View {

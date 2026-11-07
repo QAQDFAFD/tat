@@ -44,6 +44,11 @@ final class AppSettings {
         didSet { defaults.set(redMeansUp, forKey: Keys.redMeansUp) }
     }
 
+    /// How long before kickoff a match reminder fires.
+    var reminderLead: ReminderLead {
+        didSet { defaults.set(reminderLead.rawValue, forKey: Keys.reminderLead) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     init(defaults: UserDefaults) {
@@ -53,6 +58,7 @@ final class AppSettings {
         enabledIndices = defaults.stringArray(forKey: Keys.enabledIndices) ?? MarketIndex.defaultCodes
         enabledLeagues = defaults.stringArray(forKey: Keys.enabledLeagues) ?? League.defaultPaths
         redMeansUp = defaults.object(forKey: Keys.redMeansUp) as? Bool ?? true
+        reminderLead = (defaults.object(forKey: Keys.reminderLead) as? Int).flatMap(ReminderLead.init) ?? .fifteen
     }
 
     func setIndex(_ code: String, enabled: Bool) {
@@ -69,5 +75,6 @@ final class AppSettings {
         static let enabledIndices = "enabledIndices"
         static let enabledLeagues = "enabledLeagues"
         static let redMeansUp = "redMeansUp"
+        static let reminderLead = "reminderLeadMinutes"
     }
 }

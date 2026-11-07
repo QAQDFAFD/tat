@@ -157,6 +157,9 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.triggerDelay, .short)
         XCTAssertTrue(settings.redMeansUp)
         XCTAssertEqual(settings.enabledLeagues, ["soccer/eng.1"])
+        XCTAssertEqual(settings.reminderLead, .fifteen)
+        settings.reminderLead = .atKickoff
+        XCTAssertEqual(AppSettings(defaults: defaults).reminderLead, .atKickoff, "0 minutes is a real choice, not 'unset'")
 
         settings.setIndex("usNDX", enabled: false)
         settings.setIndex("sh000300", enabled: true)

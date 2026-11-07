@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(TipsStore.self) private var tips
     @Environment(AppSettings.self) private var settings
     @Environment(PanelUIState.self) private var ui
+    @Environment(ReminderStore.self) private var reminders
     @Environment(\.panelActions) private var actions
 
     var body: some View {
@@ -37,6 +38,8 @@ struct RootView: View {
         .onExitCommand { actions.dismiss() }
         .onChange(of: settings.enabledIndices) { tips.refresh() }
         .onChange(of: settings.enabledLeagues) { tips.refresh() }
+        .onChange(of: settings.reminderLead) { Task { await reminders.rescheduleAll() } }
+        .onChange(of: tips.lastMatches) { Task { await reminders.sync(with: tips.lastMatches) } }
     }
 }
 

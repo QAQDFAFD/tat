@@ -10,6 +10,7 @@
 
 - **Todo**：只有「添加」和「完成」。回车添加，点圆圈完成；未完成的自动顺延，前一天完成的第二天自动清空。
 - **Tips**：今日赛事（英超 / 西甲 / 意甲 / 德甲 / 法甲 / 欧冠 / 中超 / NBA，可选）和主要指数（上证、深证、创业板、恒生、纳斯达克100、标普500、道琼斯等，可选）。
+- **赛事提醒**：点比赛右侧的铃铛，开赛前弹出系统通知；提前多久在设置里选（开赛时 / 5 / 15 / 30 分钟 / 1 小时）。
 - **不打扰**：没有 Dock 图标；悬停呼出不抢键盘焦点；面板收起时不发任何网络请求。
 
 产品设计见 [docs/DESIGN.md](docs/DESIGN.md)。
@@ -37,9 +38,10 @@
 | 添加待办 | 在输入框输入，回车 |
 | 完成 / 撤销 | 点左侧圆圈；已完成的在「已完成」里可撤销 |
 | 删除 | 鼠标悬停行尾的 ×，或右键 →「删除」 |
-| 设置 | 面板右上角齿轮：触发延迟、开机启动、指数、联赛、涨跌颜色 |
+| 比赛提醒 | 点比赛行尾的铃铛（未开赛的比赛才有）；再点取消。第一次会请求通知权限 |
+| 设置 | 面板右上角齿轮：触发延迟、开机启动、指数、联赛、涨跌颜色、提醒提前量 |
 
-数据存放在 `~/Library/Application Support/tat/todos.json`。行情来自腾讯财经，赛事来自 ESPN，均为公开接口、仅供参考。
+数据存放在 `~/Library/Application Support/tat/`（`todos.json`、`reminders.json`）。行情来自腾讯财经，赛事来自 ESPN，均为公开接口、仅供参考。
 
 ## 开发
 
@@ -54,7 +56,7 @@ Sources/
   App/      入口、菜单栏图标、全局快捷键、设置、开机启动
   Panel/    EdgePanel 窗口 + EdgeTrigger（边缘呼出的纯逻辑状态机）
   Todo/     TodoStore：增删改、跨天规则、JSON 持久化
-  Tips/     腾讯行情 / ESPN 赛事数据源、球队中文名、TipsStore
+  Tips/     腾讯行情 / ESPN 赛事数据源、球队中文名、TipsStore、赛事提醒（ReminderStore）
   Views/    SwiftUI 界面
 Tests/      单元测试（XCTest）
 UITests/    端到端测试（XCUITest，真实启动 App、模拟鼠标与键盘）
@@ -63,11 +65,11 @@ UITests/    端到端测试（XCUITest，真实启动 App、模拟鼠标与键�
 ### 测试
 
 ```bash
-# 单元测试（34 个）
+# 单元测试（44 个）
 xcodebuild test -project Tat.xcodeproj -scheme TatUnit -destination 'platform=macOS'
 
 # 端到端测试：真实启动 App，模拟鼠标移到屏幕右边缘、添加/完成待办、切换设置……
-# 运行期间会接管鼠标和键盘，约 1.5 分钟内请不要操作电脑。
+# 运行期间会接管鼠标和键盘，约 2 分钟内请不要操作电脑。
 xcodebuild test -project Tat.xcodeproj -scheme Tat -destination 'platform=macOS' -only-testing:TatUITests
 
 # 访问真实的腾讯 / ESPN 接口（默认跳过，CI 不跑）
