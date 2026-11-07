@@ -116,7 +116,7 @@ final class TipsStoreTests: XCTestCase {
 
     func testRefreshLoadsBothSections() async {
         let store = TipsStore(settings: settings(), marketProvider: StubMarketProvider(), matchProvider: StubMatchProvider())
-        XCTAssertTrue(store.isStale)
+        XCTAssertNil(store.lastUpdated)
         store.refresh()
         XCTAssertTrue(store.isLoading)
         await waitUntilLoaded(store)
@@ -125,7 +125,7 @@ final class TipsStoreTests: XCTestCase {
         XCTAssertEqual(quotes.map(\.code), MarketIndex.defaultCodes)
         guard case .loaded(let matches) = store.matches else { return XCTFail("matches not loaded") }
         XCTAssertEqual(matches.count, 3)
-        XCTAssertFalse(store.isStale)
+        XCTAssertNotNil(store.lastUpdated)
     }
 
     func testOneFailingSectionDoesNotBreakTheOther() async {
@@ -136,15 +136,15 @@ final class TipsStoreTests: XCTestCase {
         guard case .loaded = store.matches else { return XCTFail("matches should still load") }
     }
 
-    func testStaleAfterThreeMinutes() async {
-        var now = Date(timeIntervalSince1970: 0)
-        let store = TipsStore(settings: settings(), marketProvider: StubMarketProvider(), matchProvider: StubMatchProvider(), now: { now })
+    func testRefreshKeepsLastValuesWhileLoading() async {
+        let store = TipsStore(settings: settings(), marketProvider: StubMarketProvider(), matchProvider: StubMatchProvider())
         store.refresh()
         await waitUntilLoaded(store)
-        now = now.addingTimeInterval(TipsStore.staleAfter - 1)
-        XCTAssertFalse(store.isStale)
-        now = now.addingTimeInterval(2)
-        XCTAssertTrue(store.isStale)
+        let quotes = store.lastQuotes
+        store.refresh()
+        XCTAssertTrue(store.isLoading)
+        XCTAssertEqual(store.lastQuotes, quotes, "old numbers stay on screen until the new ones land")
+        await waitUntilLoaded(store)
     }
 }
 
