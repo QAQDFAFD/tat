@@ -65,7 +65,7 @@ UITests/    端到端测试（XCUITest，真实启动 App、模拟鼠标与键�
 ### 测试
 
 ```bash
-# 单元测试（44 个）
+# 单元测试（45 个）
 xcodebuild test -project Tat.xcodeproj -scheme TatUnit -destination 'platform=macOS'
 
 # 端到端测试：真实启动 App，模拟鼠标移到屏幕右边缘、添加/完成待办、切换设置……

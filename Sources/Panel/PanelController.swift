@@ -182,7 +182,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             panel.animator().alphaValue = 1
         }
 
-        tips.refreshIfStale()
+        // Always fetch on appear: the panel is a glance, so it should show live numbers.
+        // Old values stay on screen until the new ones land.
+        tips.refresh()
         startRefreshTimer()
         onVisibilityChange?(true)
     }
@@ -279,7 +281,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     private func startRefreshTimer() {
         refreshTimer?.invalidate()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: TipsStore.staleAfter, repeats: true) { [weak self] _ in
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: TipsStore.autoRefreshInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tips.refresh() }
         }
     }

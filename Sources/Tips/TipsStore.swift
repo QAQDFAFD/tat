@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Loads the "tips" sections. Only refreshes while the panel is visible, so a hidden
-/// panel never touches the network.
+/// Loads the "tips" sections. Refetched every time the panel appears and periodically while
+/// it stays open; a hidden panel never touches the network.
 @MainActor
 @Observable
 final class TipsStore {
@@ -13,7 +13,8 @@ final class TipsStore {
         case failed(String)
     }
 
-    static let staleAfter: TimeInterval = 180
+    /// How often an open (e.g. pinned) panel refetches on its own.
+    static let autoRefreshInterval: TimeInterval = 60
 
     private(set) var markets: Phase<[Quote]> = .idle
     private(set) var matches: Phase<[Match]> = .idle
@@ -42,15 +43,6 @@ final class TipsStore {
     }
 
     var isLoading: Bool { markets == .loading || matches == .loading }
-
-    var isStale: Bool {
-        guard let lastUpdated else { return true }
-        return now().timeIntervalSince(lastUpdated) > Self.staleAfter
-    }
-
-    func refreshIfStale() {
-        if isStale { refresh() }
-    }
 
     func refresh() {
         inFlight?.cancel()
