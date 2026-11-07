@@ -2,6 +2,7 @@
 *.xcodeproj/
 !*.xcodeproj/project.xcworkspace/
 build/
+build.noindex/
 DerivedData/
 *.xcresult
 xcuserdata/

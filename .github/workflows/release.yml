@@ -42,7 +42,7 @@ jobs:
         run: |
           xcodebuild test \
             -project Tat.xcodeproj -scheme TatUnit -destination 'platform=macOS' \
-            -derivedDataPath build/DerivedData \
+            -derivedDataPath build.noindex/DerivedData \
             | xcbeautify --renderer github-actions
 
       - name: Build universal app, .zip and .dmg

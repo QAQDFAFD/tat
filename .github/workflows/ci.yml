@@ -36,7 +36,7 @@ jobs:
         run: |
           xcodebuild test \
             -project Tat.xcodeproj -scheme TatUnit -destination 'platform=macOS' \
-            -derivedDataPath build/DerivedData -resultBundlePath build/unit.xcresult \
+            -derivedDataPath build.noindex/DerivedData -resultBundlePath build.noindex/unit.xcresult \
             | xcbeautify --renderer github-actions
 
       - name: End-to-end UI tests
@@ -44,7 +44,7 @@ jobs:
           xcodebuild test \
             -project Tat.xcodeproj -scheme Tat -destination 'platform=macOS' \
             -only-testing:TatUITests \
-            -derivedDataPath build/DerivedData -resultBundlePath build/e2e.xcresult \
+            -derivedDataPath build.noindex/DerivedData -resultBundlePath build.noindex/e2e.xcresult \
             | xcbeautify --renderer github-actions
 
       - name: Upload test results
@@ -52,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-results
-          path: build/*.xcresult
+          path: build.noindex/*.xcresult
           retention-days: 14
