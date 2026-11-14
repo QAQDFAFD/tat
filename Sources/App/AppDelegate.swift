@@ -107,17 +107,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotKey = GlobalHotKey { [weak panel] in panel?.toggle() }
 
+        // `.NSCalendarDayChanged` is posted on a background thread. A selector-based observer
+        // would call a @MainActor method off the main thread, which Swift 6 traps on (tat used
+        // to crash every midnight). Deliver it on the main queue instead.
         NotificationCenter.default.addObserver(
-            self, selector: #selector(dayChanged), name: .NSCalendarDayChanged, object: nil
-        )
+            forName: .NSCalendarDayChanged, object: nil, queue: .main
+        ) { [weak todos] _ in
+            MainActor.assumeIsolated { todos?.rollOverIfNeeded() }
+        }
 
         if settings.isPinned || options.showPanel {
             panel.show(on: NSScreen.main, viaHover: false, focusInput: false)
         }
-    }
-
-    @objc private func dayChanged() {
-        Task { @MainActor in todos?.rollOverIfNeeded() }
     }
 }
 
